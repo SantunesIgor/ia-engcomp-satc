@@ -1,0 +1,12 @@
+.venv/
+venv/
+
+__pycache__/
+*.py[cod]
+*$py.class
+
+models/*
+!models/.gitkeep
+
+reports/*
+!reports/.gitkeep
