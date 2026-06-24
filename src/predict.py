@@ -1,15 +1,28 @@
-from typing import Dict
+"""
+PREVISÃO DE ATRASO
 
+Este arquivo e usado depois que o modelo ja foi treinado.
+
+A função dele e pegar o modelo salvo no disco e usar esse modelo para fazer uma previsão para um voo informado pela interface.
+    - app.py recebe os dados do usuário;
+    - predict.py transforma esses dados no formato certo;
+    - o modelo treinado calcula a probabilidade de atraso;
+    - predict.py devolve um resultado pronto para a interface mostrar.
+"""
+
+"""
+IMPORTS
+
+joblib
+    Carrega o modelo treinado.
+
+pandas
+    Cria um DataFrame com os dados de um único voo.
+"""
 import joblib
 import pandas as pd
 
-# Este arquivo faz a previsao depois que o modelo ja foi treinado.
-# Ele e usado pela interface Streamlit em app.py.
-
 try:
-    # FEATURE_COLUMNS garante que a previsao use as mesmas colunas do treinamento.
-    # MODEL_PATH aponta para o arquivo .pkl do modelo.
-    # METADATA_PATH aponta para o JSON com informacoes da interface.
     from src.config import FEATURE_COLUMNS, METADATA_PATH, MODEL_PATH
     from src.utils import (
         build_explanation,
@@ -19,7 +32,6 @@ try:
         probability_to_risk_level,
     )
 except ImportError:
-    # Fallback para casos em que o arquivo seja executado diretamente.
     from config import FEATURE_COLUMNS, METADATA_PATH, MODEL_PATH
     from utils import (
         build_explanation,
@@ -31,43 +43,45 @@ except ImportError:
 
 
 def load_model_and_metadata():
-    """Carrega o modelo treinado e os metadados da interface."""
-    # Se estes arquivos nao existem, significa que o treinamento ainda nao foi feito.
+    """
+    CARREGAMENTO DO MODELO E DOS METADADOS
+
+    Esta função abre dois arquivos gerados pelo treinamento:
+        - modelo_atraso_voos.pkl - Contem o Pipeline treinado.
+        - metadados_interface.json - Contem informações auxiliares para a interface.
+    """
     if not MODEL_PATH.exists() or not METADATA_PATH.exists():
         raise FileNotFoundError(
-            "Modelo nao encontrado. Execute primeiro: python src/train_model.py"
+            "Modelo nao encontrado. Treinamento ainda não realizado"
         )
 
-    # joblib.load abre o modelo salvo em .pkl.
-    # Esse modelo ja inclui o pre-processamento e o algoritmo escolhido.
     model = joblib.load(MODEL_PATH)
-
-    # Os metadados guardam listas de companhias, aeroportos, metricas e melhor modelo.
     metadata = load_json(METADATA_PATH)
+
     return model, metadata
 
 
 def prepare_input(
-    airline: str,
-    airport_from: str,
-    airport_to: str,
-    day_of_week: int,
-    departure_hour: int,
-    departure_minute: int,
-    length: int,
-) -> Dict:
-    """Transforma os campos da interface no formato que o modelo espera."""
-    # O usuario informa hora e minuto separados pela interface.
-    # O dataset original usa Time como minutos desde meia-noite.
-    # Exemplo: 18:30 vira 18 * 60 + 30 = 1110.
+    airline,
+    airport_from,
+    airport_to,
+    day_of_week,
+    departure_hour,
+    departure_minute,
+    length,
+):
+    """
+    PREPARAÇÃO DA ENTRADA DO USUÁRIO
+    --------------------------------
+
+    O usuário preenche campos na interface a função transforma o input em um dicionario representando um único voo.
+    """
+    # O usuário informa hora e minuto separados pela interface e o original usa Time como minutos desde meia-noite.
     time_in_minutes = int(departure_hour) * 60 + int(departure_minute)
 
     # Cria a mesma variavel PeriodOfDay usada no treinamento.
-    # Exemplo: 18 vira "Noite".
     period_of_day = classify_period_of_day(int(departure_hour))
 
-    # Este dicionario representa um unico voo novo.
-    # As chaves precisam bater com FEATURE_COLUMNS.
     return {
         "Airline": airline,
         "AirportFrom": airport_from,
@@ -80,27 +94,27 @@ def prepare_input(
     }
 
 
-def predict_delay(input_data: Dict) -> Dict:
-    """Calcula a previsao de atraso e monta o resultado para a interface."""
-    # Carrega o modelo treinado e informacoes salvas no treinamento.
+def predict_delay(input_data):
+    """
+    PREVISÃO DO ATRASO
+
+    Esta função recebe os dados ja preparados de um voo e pergunta ao modelo qual e a probabilidade deste voo pertencer a classe 1
+        - classe 0 significa menor risco/sem atraso
+        - classe 1 significa atraso
+
+    Depois a probabilidade e transformada em nível de risco.
+
+    A função devolve um dicionario com tudo que o app.py precisa exibir.
+    """
     model, metadata = load_model_and_metadata()
 
     # Transforma o dicionario de um voo em DataFrame.
-    # O scikit-learn espera receber dados nesse formato.
-    # [FEATURE_COLUMNS] tambem garante a ordem correta das colunas.
     input_dataframe = pd.DataFrame([input_data])[FEATURE_COLUMNS]
 
-    # predict_proba devolve a probabilidade de cada classe.
-    # [0][1] significa: primeira linha, probabilidade da classe 1.
-    # Classe 1 = voo com atraso.
-    if hasattr(model, "predict_proba"):
-        probability_delay = float(model.predict_proba(input_dataframe)[0][1])
-    else:
-        # Este fallback existe para modelos que nao oferecem predict_proba.
-        probability_delay = float(model.predict(input_dataframe)[0])
+    # Devolve a probabilidade de cada classe.
+    probability_delay = float(model.predict_proba(input_dataframe)[0][1])
 
     # Transforma a probabilidade em classe.
-    # Se a chance for 50% ou mais, considera classe 1: atraso.
     predicted_class = int(probability_delay >= 0.50)
 
     # Transforma a probabilidade em texto: Baixo, Moderado ou Alto.
@@ -111,7 +125,11 @@ def predict_delay(input_data: Dict) -> Dict:
         "classe_prevista": predicted_class,
         "probabilidade_atraso": probability_delay,
         "nivel_risco": risk_level,
-        "mensagem": "Risco de atraso identificado." if predicted_class == 1 else "Risco de atraso menor identificado.",
+        "mensagem": (
+            "Risco de atraso identificado."
+            if predicted_class == 1
+            else "Risco de atraso menor identificado."
+        ),
         "recomendacao": practical_recommendation(risk_level),
         "explicacao": build_explanation(input_data, probability_delay, risk_level),
         "melhor_modelo": metadata.get("melhor_modelo", "modelo treinado"),

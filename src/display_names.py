@@ -1,5 +1,10 @@
-from typing import Iterable, List, Tuple
+"""
+NOMES PARA EXIBIÇÃO
 
+Este arquivo traduz códigos técnicos em textos mais fáceis de entender.
+"""
+
+# DICIONARIOS
 AIRLINE_NAMES = {
     "AS": "Alaska Airlines",
     "AA": "American Airlines",
@@ -63,36 +68,53 @@ AIRPORT_NAMES = {
     "TPA": "Tampa, Florida - Tampa International Airport",
 }
 
+# CONJUNTOS PERMITIDOS
 ALLOWED_AIRLINE_CODES = set(AIRLINE_NAMES.keys())
+
 ALLOWED_AIRPORT_CODES = set(AIRPORT_NAMES.keys())
 
 
+# FUNÇÕES
 def normalize_code(code):
+    """
+    - transforma o valor em texto;
+    - remove espacos antes e depois;
+    - converte para letras maiusculas.
+    """
     return str(code).strip().upper()
 
 
 def airline_name(code):
+    # Recebe um código de companhia e devolve o nome completo. Retorna erro se não houver.
     code = normalize_code(code)
+
     return AIRLINE_NAMES.get(code, f"Companhia aerea nao identificada: {code}")
 
 
 def airport_name(code):
+    # Recebe um código de aeroporto e devolve o nome completo.
     code = normalize_code(code)
+
     return AIRPORT_NAMES.get(code, f"Aeroporto nao identificado: {code}")
 
 
 def airline_label(code):
+    """
+    Monta um texto com:
+        - nome completo da companhia;
+        - código entre parenteses.
+    """
     code = normalize_code(code)
+
     return f"{airline_name(code)} ({code})"
 
 
 def airport_label(code):
+    """
+    Monta um texto com:
+        - nome/local do aeroporto;
+        - código entre parenteses.
+    """
     code = normalize_code(code)
+
     return f"{airport_name(code)} ({code})"
-
-
-def build_options(codes, label_function):
-    unique_codes = sorted({normalize_code(code) for code in codes if str(code).strip()})
-    labels = sorted([label_function(code) for code in unique_codes])
-    label_to_code = {label_function(code): code for code in unique_codes}
-    return labels, label_to_code

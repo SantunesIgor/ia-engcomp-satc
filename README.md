@@ -1,6 +1,6 @@
 # Meu voo vai atrasar?
 
-Projeto simples em Python para treinar um modelo de previsao de atraso de voos e rodar uma interface com Streamlit.
+Projeto em Python para treinar um modelo de previsão de atraso de voos e rodar uma interface com Streamlit.
 
 ## Como rodar
 
@@ -15,13 +15,9 @@ python src/train_model.py
 streamlit run app.py
 ```
 
-Os comandos acima tambem estao no arquivo `commands.txt`.
-
 ## Pastas principais
 
 - `data/`: base de dados do projeto.
-- `src/`: codigo de treino, predicao e utilitarios.
+- `src/`: código de treino, predição e utilitários.
 - `models/`: arquivos de modelos gerados pelo treinamento.
-- `reports/`: relatorios e saidas geradas.
-
-As pastas `models/` e `reports/` sobem vazias para o Git. Os arquivos gerados dentro delas ficam ignorados.
+- `reports/`: relatórios e saídas geradas.

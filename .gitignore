@@ -1,6 +1,12 @@
 .venv/
 venv/
 
+.agents
+
+.vscode
+
+commands.txt
+
 __pycache__/
 *.py[cod]
 *$py.class
